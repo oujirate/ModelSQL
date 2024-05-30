@@ -101,7 +101,7 @@ class model:
         finally:
             self.close()
 
-    def read_data(self):
+    def read_data(self,select='*',table=None,join=None,where=None,groupby=None,having=None,orderby=None):
         pass
 
     def update_data(self):
