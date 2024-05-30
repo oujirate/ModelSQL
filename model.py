@@ -1,4 +1,6 @@
 import psycopg2 as pg
+import pandas as pd
+from tabulate import tabulate
 from psycopg2 import OperationalError
 
 class model:
@@ -19,7 +21,7 @@ class model:
             self.cur = self.conn.cursor()
 
         except OperationalError as ex:
-            print(f"[ Koneksi ke Database Gagal! Error: {ex} ]")
+            print(f"Connection Failed! Error: {ex}")
 
     def close(self):
         if self.conn is not None and self.cur is not None:
@@ -27,9 +29,9 @@ class model:
                 self.cur.close()
                 self.conn.close()
             except OperationalError as ex:
-                print(f"Gagal Menutup Koneksi! Error: {ex}")
+                print(f"Close Failed! Error: {ex}")
         else:
-            print("[ Tidak ada koneksi yang ditutup! ]")
+            print("Message: Connection Not Found!")
     
     def version(self):
         try:
@@ -39,12 +41,65 @@ class model:
             print(f"Versi PostgreSQL: {version[0]}")
 
         except OperationalError as ex:
-            print(f"[ Error: {ex} ]")
+            print(f"Error: {ex}")
+        finally:
+            self.close()
+
+    def get_columndata(self,table,idenable=0):
+        try:
+            self.connect()
+            column_data = []
+            query = f"SELECT column_name FROM information_schema.columns WHERE table_name = '{table}' ORDER BY ordinal_position"
+            self.cur.execute(query)
+            column = self.cur.fetchall()
+            if idenable == 1:
+                for i in column:
+                    column_data.extend(i)
+            else:
+                for i in column[1:]:
+                    column_data.extend(i)
+            return column_data
+        
+        except OperationalError as ex:
+            print(f"Error: {ex}")
+
         finally:
             self.close()
     
-    def create_data(self):
-        pass
+    def getall_tablename(self):
+        try:
+            self.connect()
+            table_name = []
+            query = f"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
+            self.cur.execute(query)
+            table = self.cur.fetchall()
+            for i in table:
+                table_name.extend(i)
+            return table_name
+        except OperationalError as ex:
+            print(f"Error: {ex}")
+        finally:
+            self.close()
+
+    def get_tablename(self,table):
+        table_name = None
+        tables = self.getall_tablename()
+        for i in tables:
+            if i == table:
+                table_name = i
+        return table_name
+
+    def create_data(self,table,values):
+        try:
+            column = self.get_columndata(table=table)
+            self.connect()
+            query = f"INSERT INTO {table} ({','.join(column)}) VALUES ({','.join(['%s'] * len(values))})"
+            self.cur.execute(query,values)
+            self.conn.commit()
+        except OperationalError as ex:
+            print(f"Error: {ex}")
+        finally:
+            self.close()
 
     def read_data(self):
         pass
@@ -52,5 +107,5 @@ class model:
     def update_data(self):
         pass
 
-    def delete_column(self):
+    def delete_data(self):
         pass
