@@ -1,6 +1,4 @@
 import psycopg2 as pg
-import pandas as pd
-from tabulate import tabulate
 from psycopg2 import OperationalError
 
 class model:
@@ -102,7 +100,49 @@ class model:
             self.close()
 
     def read_data(self,select='*',table=None,join=None,where=None,groupby=None,having=None,orderby=None):
-        pass
+        query = ""
+        if table:
+            column = self.get_columndata(table=table)
+            self.connect()
+            if join:
+                list_join = join.strip().split(",")
+                if select != "*":
+                    query = f"SELECT "
+                    list_select = select.strip().split(",")
+                    tables = [table]
+                    if len(list_join) > 0:
+                        for i in list_join:
+                            tables.append(i)
+                    else:
+                        tables.append(join)
+
+                    count = 1
+                    for i in list_select:
+                        list_format = [i]
+                        for j in tables:
+                            list_format.append(j)
+
+                        str_table = ",".join("%s" for table in tables)
+
+                        query_find = f"SELECT table_name FROM information_schema.columns WHERE column_name = %s AND table_name in ({str_table})"
+                        self.cur.execute(query_find,tuple(list_format))
+                        table = self.cur.fetchone()
+                        if count == len(list_select):
+                            query += f"{table[0]}.{i}"
+                        else:
+                            query += f"{table[0]}.{i}, "
+                            count += 1
+                
+                    print(query)
+                    exit()
+                else:
+                    query += f"SELECT * FROM {table} "
+            if where:
+                pass
+
+
+
+            
 
     def update_data(self):
         pass
