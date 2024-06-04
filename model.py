@@ -106,7 +106,7 @@ class sqlmodel:
             self.close()
 
     def read_data(self,select='*',table=None,join=None,where=None,groupby=None,having=None,orderby=None):
-        query = f"SELECT "
+        query = f"SELECT"
         count = 0
         switch_join = False
         fragment = ""
@@ -117,17 +117,18 @@ class sqlmodel:
                 tables_data = join.strip().split(",")
                 tables_data.append(table)
 
+                # GROUP BY and HAVING WIP
+
                 if join:
                     for i in select_list:
                         for j in tables_data:
                             column = self.get_columndata(table=j,idenable=True)
                             if i in column:
-                                fragment = f"{j}.{i}"
+                                fragment = f" {j}.{i}"
                                 query += fragment
                                 count += 1
                                 if count < (len(select_list)):
-                                    fragment = ", "
-                                    query += fragment
+                                    query += ","
                                 continue
                     fragment = f" FROM {table}"
                     query += fragment
@@ -149,6 +150,7 @@ class sqlmodel:
             
                 if where:
                     if switch_join is True:
+                        # WIP
                         pass
                     else:
                         fragment = f" WHERE %s"
@@ -156,11 +158,11 @@ class sqlmodel:
 
                 if orderby:
                     if switch_join is True:
+                        # WIP
                         pass
                     else:
                         fragment = f" ORDER BY {orderby.strip()}"
                         query += fragment
-                    
             else:
                 pass
         except Exception as ex:
@@ -168,8 +170,44 @@ class sqlmodel:
         finally:
             self.close()
             
-    def update_data(self):
-        pass
+    def update_data(self,table,idcolumn,values):
+        try:
+            count = 0
+            query = f"UPDATE {table} SET"
+            column = self.get_columndata(table=table,idenable=True)
+            self.connect()
+            for i in column[1:]:
+                fragment = f" {i} = %s"
+                query += fragment
+                count += 1
+                if count < len(values):
+                    query += f","
+            fragment = f" WHERE {column[0]} = {idcolumn}"
+            query += fragment
+            self.cur.execute(query,values)
+            self.conn.commit()
 
-    def delete_data(self):
-        pass
+        except Exception as ex:
+            print(f"Error: {ex}")
+
+        finally:
+            self.close()
+
+    def delete_data(self): # WIP
+        try:
+            pass
+        except Exception as ex:
+            pass
+        finally:
+            pass
+
+
+# Feature Uncoming:
+# - Group by
+# - Having
+# - Sync support query for group by
+# - Delete data
+# - autoclose connection option
+# - NEED MORE IDEAS UWU
+
+
