@@ -1,7 +1,7 @@
 import psycopg2 as pg
 from psycopg2 import OperationalError
 
-class model:
+class sqlmodel:
     def __init__(self,host,port,username,password,dbname):
         self.host = host
         self.port = port
@@ -10,6 +10,10 @@ class model:
         self.dbname = dbname
         self.conn = None
         self.cur = None
+
+    def dd(self,var):
+        print(var)
+        exit()
 
     def connect(self):
         try:
@@ -43,7 +47,7 @@ class model:
         finally:
             self.close()
 
-    def get_columndata(self,table,idenable=0):
+    def get_columndata(self,table,idenable=False):
         try:
             self.connect()
             column_data = []
@@ -79,13 +83,15 @@ class model:
         finally:
             self.close()
 
-    def get_tablename(self,table):
-        table_name = None
-        tables = self.getall_tablename()
-        for i in tables:
-            if i == table:
-                table_name = i
-        return table_name
+    def auth_columntable(self,table,column):
+        try:
+            columns = self.get_columndata(table=table,idenable=True)
+            for i in columns:
+                if i == column.strip():
+                    return True
+            return False
+        except Exception as ex:
+            print(f"Error: {ex}")
 
     def create_data(self,table,values):
         try:
@@ -100,50 +106,51 @@ class model:
             self.close()
 
     def read_data(self,select='*',table=None,join=None,where=None,groupby=None,having=None,orderby=None):
-        query = ""
-        if table:
-            column = self.get_columndata(table=table)
+        query = f"SELECT "
+        count = 0
+        fragment = ""
+        try:
             self.connect()
-            if join:
-                list_join = join.strip().split(",")
-                if select != "*":
-                    query = f"SELECT "
-                    list_select = select.strip().split(",")
-                    tables = [table]
-                    if len(list_join) > 0:
-                        for i in list_join:
-                            tables.append(i)
-                    else:
-                        tables.append(join)
+            if table:
+                if join:
+                    select_list = select.strip().split(",")
+                    table_join = join.strip().split(",")
+                    table_join.append(table)
+                    for i in select_list:
+                        for j in table_join:
+                            column = self.get_columndata(table=j,idenable=True)
+                            if i in column:
+                                fragment = f"{j}.{i}"
+                                query += fragment
+                                count += 1
+                                if count < (len(select_list)):
+                                    fragment = ", "
+                                    query += fragment
+                                continue
+                    fragment = f" FROM {table}"
+                    query += fragment
 
-                    count = 1
-                    for i in list_select:
-                        list_format = [i]
-                        for j in tables:
-                            list_format.append(j)
+                    for i in table_join:
+                        column_pk = self.get_columndata(table=i,idenable=True)
+                        for j in table_join:
+                            column_fk = self.get_columndata(table=j,idenable=True)
+                            for k in column_fk:
+                                if column_pk[0] == k and j != i: 
+                                    fragment = f" JOIN {i} ON {i}.{column_pk[0]} = {j}.{k}"
+                                    query += fragment
+                    self.dd(query)
 
-                        str_table = ",".join("%s" for table in tables)
 
-                        query_find = f"SELECT table_name FROM information_schema.columns WHERE column_name = %s AND table_name in ({str_table})"
-                        self.cur.execute(query_find,tuple(list_format))
-                        table = self.cur.fetchone()
-                        if count == len(list_select):
-                            query += f"{table[0]}.{i}"
-                        else:
-                            query += f"{table[0]}.{i}, "
-                            count += 1
-                
-                    print(query)
-                    exit()
                 else:
-                    query += f"SELECT * FROM {table} "
-            if where:
+                    fragment = F"{select.strip()} FROM {table}"
+                    query += fragment
+            else:
                 pass
-
-
-
+        except Exception as ex:
+            print(f"Error: {ex}")
+        finally:
+            self.close()
             
-
     def update_data(self):
         pass
 
