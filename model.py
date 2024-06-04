@@ -108,16 +108,18 @@ class sqlmodel:
     def read_data(self,select='*',table=None,join=None,where=None,groupby=None,having=None,orderby=None):
         query = f"SELECT "
         count = 0
+        switch_join = False
         fragment = ""
         try:
             self.connect()
             if table:
+                select_list = select.strip().split(",")
+                tables_data = join.strip().split(",")
+                tables_data.append(table)
+
                 if join:
-                    select_list = select.strip().split(",")
-                    table_join = join.strip().split(",")
-                    table_join.append(table)
                     for i in select_list:
-                        for j in table_join:
+                        for j in tables_data:
                             column = self.get_columndata(table=j,idenable=True)
                             if i in column:
                                 fragment = f"{j}.{i}"
@@ -130,20 +132,35 @@ class sqlmodel:
                     fragment = f" FROM {table}"
                     query += fragment
 
-                    for i in table_join:
+                    for i in tables_data:
                         column_pk = self.get_columndata(table=i,idenable=True)
-                        for j in table_join:
+                        for j in tables_data:
                             column_fk = self.get_columndata(table=j,idenable=True)
                             for k in column_fk:
                                 if column_pk[0] == k and j != i: 
                                     fragment = f" JOIN {i} ON {i}.{column_pk[0]} = {j}.{k}"
                                     query += fragment
-                    self.dd(query)
 
+                    switch_join = True
 
                 else:
                     fragment = F"{select.strip()} FROM {table}"
                     query += fragment
+            
+                if where:
+                    if switch_join is True:
+                        pass
+                    else:
+                        fragment = f" WHERE %s"
+                        query += fragment
+
+                if orderby:
+                    if switch_join is True:
+                        pass
+                    else:
+                        fragment = f" ORDER BY {orderby.strip()}"
+                        query += fragment
+                    
             else:
                 pass
         except Exception as ex:
