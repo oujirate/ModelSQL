@@ -105,20 +105,18 @@ class sqlmodel:
         finally:
             self.close()
 
-    def read_data(self,select='*',table=None,join=None,where=None,groupby=None,having=None,orderby=None):
+    def read_data(self,select='*',table="",join="",where="",groupby="",having="",orderby=""):
         query = f"SELECT"
         count = 0
         switch_join = False
         fragment = ""
         try:
             self.connect()
-            if table:
+            if table.strip() in self.getall_tablename():
                 select_list = select.strip().split(",")
-                tables_data = join.strip().split(",")
+                tables_data = (join or "").strip().split(",")
                 tables_data.append(table)
-
-                # GROUP BY and HAVING WIP
-
+                
                 if join:
                     for i in select_list:
                         for j in tables_data:
@@ -127,8 +125,7 @@ class sqlmodel:
                                 fragment = f" {j}.{i}"
                                 query += fragment
                                 count += 1
-                                if count < (len(select_list)):
-                                    query += ","
+                                query += "," if count < (len(select_list)) else ""
                                 continue
                     fragment = f" FROM {table}"
                     query += fragment
@@ -141,11 +138,10 @@ class sqlmodel:
                                 if column_pk[0] == k and j != i: 
                                     fragment = f" JOIN {i} ON {i}.{column_pk[0]} = {j}.{k}"
                                     query += fragment
-
                     switch_join = True
 
                 else:
-                    fragment = F"{select.strip()} FROM {table}"
+                    fragment = F"{" *" if select == '*' else select.strip()} FROM {table}"
                     query += fragment
             
                 if where:
@@ -163,8 +159,10 @@ class sqlmodel:
                     else:
                         fragment = f" ORDER BY {orderby.strip()}"
                         query += fragment
+
+                self.dd(query)
             else:
-                pass
+                raise Exception("Tabel is None")
         except Exception as ex:
             print(f"Error: {ex}")
         finally:
@@ -208,6 +206,7 @@ class sqlmodel:
 # - Sync support query for group by
 # - Delete data
 # - autoclose connection option
+# - Auth database condition (on/off)
 # - NEED MORE IDEAS UWU
 
 
